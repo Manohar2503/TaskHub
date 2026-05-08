@@ -29,14 +29,22 @@ connectDB();
 app.use(helmet());
 
 // CORS configuration
+const normalizeOrigin = (origin) => origin.replace(/\/$/, '');
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 
 app.use(
     cors({
-        origin: allowedOrigins,
+        origin(origin, callback) {
+            if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) {
+                return callback(null, true);
+            }
+
+            return callback(new Error(`CORS blocked origin: ${origin}`));
+        },
         credentials: true,
     })
 );
@@ -102,11 +110,11 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// if (!process.env.VERCEL) {
-//     app.listen(PORT, () => {
-//         console.log(`Server is running on port ${PORT}`);
-//         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-//     });
-// }
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+}
 
 export default app;
