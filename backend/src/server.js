@@ -56,7 +56,7 @@ const limiter = rateLimit({
     },
 });
 
-app.use('/api/', limiter);
+//app.use('/api/', limiter);
 
 // ========================
 // Health Check
@@ -90,9 +90,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// app.listen(PORT, () => {
+//     console.log(`Server is running on port ${PORT}`);
+//     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+// });
 
 export default app;
