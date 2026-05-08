@@ -29,9 +29,14 @@ connectDB();
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 app.use(
     cors({
-        origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+        origin: allowedOrigins,
         credentials: true,
     })
 );
@@ -62,6 +67,13 @@ const limiter = rateLimit({
 // Health Check
 // ========================
 
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Task Manager API is running',
+    });
+});
+
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
@@ -90,9 +102,11 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// app.listen(PORT, () => {
-//     console.log(`Server is running on port ${PORT}`);
-//     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-// });
+// if (!process.env.VERCEL) {
+//     app.listen(PORT, () => {
+//         console.log(`Server is running on port ${PORT}`);
+//         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+//     });
+// }
 
 export default app;
