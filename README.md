@@ -522,8 +522,7 @@ Created as a professional MERN stack project management solution.
 
 ## 📞 Support
 
-For support, email support@taskhub.com or open an issue in the repository.
+For support, email manujinka22@gmail.com or open an issue in the repository.
 
 ---
 
-**Happy Project Managing! 🚀**
