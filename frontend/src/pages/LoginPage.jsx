@@ -49,6 +49,7 @@ export const LoginPage = () => {
                                 <Mail size={18} className="absolute left-3 top-3 text-gray-400" />
                                 <input
                                     type="email"
+                                    autoComplete="email"
                                     {...register('email', {
                                         required: 'Email is required',
                                         pattern: {
@@ -74,6 +75,7 @@ export const LoginPage = () => {
                                 <Lock size={18} className="absolute left-3 top-3 text-gray-400" />
                                 <input
                                     type="password"
+                                    autoComplete="current-password"
                                     {...register('password', {
                                         required: 'Password is required',
                                         minLength: {
