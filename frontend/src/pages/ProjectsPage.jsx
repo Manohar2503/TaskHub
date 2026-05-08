@@ -31,7 +31,7 @@ export const ProjectsPage = () => {
                 setProjects(response.data.projects);
             }
         } catch (error) {
-            toast.error('Failed to fetch projects');
+            toast.error(error.response?.data?.message || 'Failed to fetch projects');
         } finally {
             setLoading(false);
         }
@@ -108,7 +108,7 @@ export const ProjectsPage = () => {
                 toast.success('Project deleted successfully');
             }
         } catch (error) {
-            toast.error('Failed to delete project');
+            toast.error(error.response?.data?.message || 'Failed to delete project');
         }
     };
 

@@ -7,19 +7,42 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token'));
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(!!localStorage.getItem('token'));
     const [isAuthenticated, setIsAuthenticated] = useState(!!token);
 
     // Initialize user on mount
     useEffect(() => {
-        const savedUser = localStorage.getItem('user');
-        const savedToken = localStorage.getItem('token');
+        const initializeAuth = async () => {
+            const savedUser = localStorage.getItem('user');
+            const savedToken = localStorage.getItem('token');
 
-        if (savedToken && savedUser) {
-            setToken(savedToken);
-            setUser(JSON.parse(savedUser));
-            setIsAuthenticated(true);
-        }
+            if (!savedToken || !savedUser) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setToken(savedToken);
+                setUser(JSON.parse(savedUser));
+                setIsAuthenticated(true);
+
+                const response = await authService.getCurrentUser();
+                if (response.success) {
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                    setUser(response.data.user);
+                }
+            } catch (error) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setToken(null);
+                setUser(null);
+                setIsAuthenticated(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initializeAuth();
     }, []);
 
     const signup = useCallback(async (name, email, password, confirmPassword) => {

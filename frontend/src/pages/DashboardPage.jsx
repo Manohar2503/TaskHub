@@ -42,6 +42,24 @@ export const DashboardPage = () => {
                     <p className="text-gray-600 mt-2">Welcome back! Here's your task overview.</p>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="card p-6">
+                        <p className="text-sm font-medium text-primary-600 mb-2">Admin Role</p>
+                        <h2 className="text-lg font-semibold text-gray-900">Assigns and manages tasks</h2>
+                        <p className="text-gray-600 mt-2">
+                            Admin users create projects, add members, and assign tasks to the team.
+                        </p>
+                    </div>
+
+                    <div className="card p-6">
+                        <p className="text-sm font-medium text-green-600 mb-2">Member Role</p>
+                        <h2 className="text-lg font-semibold text-gray-900">Receives and updates tasks</h2>
+                        <p className="text-gray-600 mt-2">
+                            Member users view assigned tasks and update progress to todo, in progress, or completed.
+                        </p>
+                    </div>
+                </div>
+
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     {/* Total Projects */}

@@ -44,10 +44,16 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(morgan('combined'));
 
 // Rate limiting
+const isDevelopment = process.env.NODE_ENV !== 'production';
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX || 100),
-    message: 'Too many requests from this IP, please try again later.',
+    max: parseInt(process.env.RATE_LIMIT_MAX || (isDevelopment ? 1000 : 100)),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many requests. Please wait a moment and try again.',
+    },
 });
 
 app.use('/api/', limiter);

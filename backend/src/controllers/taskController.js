@@ -12,6 +12,18 @@ const isProjectMember = (project, userId) => (
     project.teamMembers.some((member) => getMemberId(member).equals(userId))
 );
 
+const isProjectAdmin = (project, userId, userRole) => (
+    userRole === USER_ROLES.ADMIN ||
+    project.owner.equals(userId) ||
+    project.teamMembers.some((member) => (
+        getMemberId(member).equals(userId) && member.role === USER_ROLES.ADMIN
+    ))
+);
+
+const isAssignedUser = (task, userId) => (
+    task.assignedTo && task.assignedTo.equals(userId)
+);
+
 const addAssigneeToProject = async (project, assignedTo) => {
     if (!assignedTo || isProjectMember(project, assignedTo)) {
         return;
@@ -42,9 +54,9 @@ export const createTask = asyncHandler(async (req, res) => {
         return sendError(res, 'Project not found', HTTP_STATUS.NOT_FOUND);
     }
 
-    const isMember = isProjectMember(project, req.userId);
+    const isAdmin = isProjectAdmin(project, req.userId, req.userRole);
 
-    if (!isMember && req.userRole !== USER_ROLES.ADMIN) {
+    if (!isAdmin) {
         return sendError(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
     }
 
@@ -151,22 +163,36 @@ export const updateTask = asyncHandler(async (req, res) => {
     const project = await Project.findById(task.project);
 
     const isMember = isProjectMember(project, req.userId);
+    const isAdmin = isProjectAdmin(project, req.userId, req.userRole);
+    const isStatusOnlyUpdate =
+        status &&
+        title === undefined &&
+        description === undefined &&
+        priority === undefined &&
+        assignedTo === undefined &&
+        dueDate === undefined;
 
     if (!isMember && req.userRole !== USER_ROLES.ADMIN) {
         return sendError(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
     }
 
-    try {
-        await addAssigneeToProject(project, assignedTo);
-    } catch (error) {
-        return sendError(res, error.message, HTTP_STATUS.BAD_REQUEST);
+    if (!isAdmin) {
+        if (!isStatusOnlyUpdate || !isAssignedUser(task, req.userId)) {
+            return sendError(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
+        }
+    } else {
+        try {
+            await addAssigneeToProject(project, assignedTo);
+        } catch (error) {
+            return sendError(res, error.message, HTTP_STATUS.BAD_REQUEST);
+        }
     }
 
     const wasCompleted = task.status === TASK_STATUS.COMPLETED;
 
     // Update fields
-    if (title) task.title = title;
-    if (description !== undefined) task.description = description;
+    if (isAdmin && title) task.title = title;
+    if (isAdmin && description !== undefined) task.description = description;
     if (status) {
         task.status = status;
         if (status === TASK_STATUS.COMPLETED && !wasCompleted) {
@@ -177,9 +203,9 @@ export const updateTask = asyncHandler(async (req, res) => {
             project.completedTaskCount -= 1;
         }
     }
-    if (priority) task.priority = priority;
-    if (assignedTo !== undefined) task.assignedTo = assignedTo || null;
-    if (dueDate !== undefined) task.dueDate = dueDate || null;
+    if (isAdmin && priority) task.priority = priority;
+    if (isAdmin && assignedTo !== undefined) task.assignedTo = assignedTo || null;
+    if (isAdmin && dueDate !== undefined) task.dueDate = dueDate || null;
 
     // Check if task is overdue
     if (task.dueDate && task.status !== TASK_STATUS.COMPLETED && new Date() > new Date(task.dueDate)) {
@@ -214,10 +240,9 @@ export const deleteTask = asyncHandler(async (req, res) => {
     // Check authorization
     const project = await Project.findById(task.project);
 
-    const isOwner = task.createdBy.equals(req.userId);
-    const isProjectOwner = project.owner.equals(req.userId);
+    const isAdmin = isProjectAdmin(project, req.userId, req.userRole);
 
-    if (!isOwner && !isProjectOwner && req.userRole !== USER_ROLES.ADMIN) {
+    if (!isAdmin) {
         return sendError(res, ERROR_MESSAGES.FORBIDDEN, HTTP_STATUS.FORBIDDEN);
     }
 

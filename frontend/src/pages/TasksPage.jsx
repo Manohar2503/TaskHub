@@ -23,7 +23,7 @@ export const TasksPage = () => {
                 setTasks(response.data.tasks);
             }
         } catch (error) {
-            toast.error('Failed to fetch tasks');
+            toast.error(error.response?.data?.message || 'Failed to fetch tasks');
         } finally {
             setLoading(false);
         }
@@ -39,7 +39,7 @@ export const TasksPage = () => {
                 toast.success('Task deleted');
             }
         } catch (error) {
-            toast.error('Failed to delete task');
+            toast.error(error.response?.data?.message || 'Failed to delete task');
         }
     };
 

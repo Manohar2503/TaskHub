@@ -8,6 +8,7 @@ import { TaskCard } from '../components/TaskCard.jsx';
 import { authService } from '../services/authService.js';
 import { projectService } from '../services/projectService.js';
 import { taskService } from '../services/taskService.js';
+import { useAuth } from '../hooks/useAuth.js';
 
 const emptyTaskForm = {
     title: '',
@@ -21,6 +22,7 @@ const emptyTaskForm = {
 export const ProjectDetailPage = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [project, setProject] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [users, setUsers] = useState([]);
@@ -50,6 +52,21 @@ export const ProjectDetailPage = () => {
         ));
     }, [teamMembers, users]);
 
+    const isProjectAdmin = useMemo(() => {
+        if (!project || !user) {
+            return false;
+        }
+
+        const ownerId = project.owner?._id || project.owner;
+        const isOwner = ownerId === user._id;
+        const isTeamAdmin = project.teamMembers?.some((member) => {
+            const memberId = member.user?._id || member.user;
+            return memberId === user._id && member.role === 'admin';
+        });
+
+        return user.role === 'admin' || isOwner || isTeamAdmin;
+    }, [project, user]);
+
     useEffect(() => {
         fetchProjectDetails();
     }, [projectId]);
@@ -57,10 +74,9 @@ export const ProjectDetailPage = () => {
     const fetchProjectDetails = async () => {
         setLoading(true);
         try {
-            const [projectResponse, tasksResponse, usersResponse] = await Promise.all([
+            const [projectResponse, tasksResponse] = await Promise.all([
                 projectService.getProjectById(projectId),
                 taskService.getTasksByProject(projectId),
-                authService.getAllUsers(),
             ]);
 
             if (projectResponse.success) {
@@ -70,19 +86,29 @@ export const ProjectDetailPage = () => {
             if (tasksResponse.success) {
                 setTasks(tasksResponse.data.tasks);
             }
-
-            if (usersResponse.success) {
-                setUsers(usersResponse.data.users);
-            }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to load project');
             navigate('/projects');
         } finally {
             setLoading(false);
         }
+
+        try {
+            const usersResponse = await authService.getAllUsers();
+            if (usersResponse.success) {
+                setUsers(usersResponse.data.users);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to load assignable users');
+        }
     };
 
     const openCreateTaskModal = () => {
+        if (!isProjectAdmin) {
+            toast.error('Only admins can assign tasks');
+            return;
+        }
+
         setEditingTaskId(null);
         setTaskForm({
             ...emptyTaskForm,
@@ -92,6 +118,11 @@ export const ProjectDetailPage = () => {
     };
 
     const openEditTaskModal = (task) => {
+        if (!isProjectAdmin) {
+            toast.error('Only admins can edit task details');
+            return;
+        }
+
         setEditingTaskId(task._id);
         setTaskForm({
             title: task.title || '',
@@ -161,6 +192,11 @@ export const ProjectDetailPage = () => {
     };
 
     const handleTaskDelete = async (taskId) => {
+        if (!isProjectAdmin) {
+            toast.error('Only admins can delete tasks');
+            return;
+        }
+
         if (!window.confirm('Delete this task?')) return;
 
         try {
@@ -220,6 +256,10 @@ export const ProjectDetailPage = () => {
         return <LoadingSpinner />;
     }
 
+    const canUpdateTaskStatus = (task) => (
+        isProjectAdmin || task.assignedTo?._id === user?._id
+    );
+
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-8">
             <div className="max-w-7xl mx-auto">
@@ -242,14 +282,19 @@ export const ProjectDetailPage = () => {
                             <span>{project.completedTaskCount || 0} completed</span>
                             <span>{teamMembers.length} members</span>
                         </div>
+                        <p className="text-sm text-gray-500 mt-3">
+                            Admin assigns tasks to registered members. Members update their assigned tasks as work progresses.
+                        </p>
                     </div>
-                    <button
-                        onClick={openCreateTaskModal}
-                        className="btn-primary inline-flex items-center justify-center gap-2"
-                    >
-                        <Plus size={20} />
-                        <span>Add Task</span>
-                    </button>
+                    {isProjectAdmin && (
+                        <button
+                            onClick={openCreateTaskModal}
+                            className="btn-primary inline-flex items-center justify-center gap-2"
+                        >
+                            <Plus size={20} />
+                            <span>Add Task</span>
+                        </button>
+                    )}
                 </div>
 
                 {assignableUsers.length === 0 && (
@@ -260,7 +305,11 @@ export const ProjectDetailPage = () => {
 
                 {tasks.length === 0 ? (
                     <div className="card p-12 text-center">
-                        <p className="text-gray-600 text-lg">No tasks yet. Add the first task for this project.</p>
+                        <p className="text-gray-600 text-lg">
+                            {isProjectAdmin
+                                ? 'No tasks yet. Add the first task for this project.'
+                                : 'No tasks have been assigned in this project yet.'}
+                        </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -268,9 +317,9 @@ export const ProjectDetailPage = () => {
                             <TaskCard
                                 key={task._id}
                                 task={task}
-                                onEdit={openEditTaskModal}
-                                onDelete={handleTaskDelete}
-                                onStatusChange={handleTaskStatusChange}
+                                onEdit={isProjectAdmin ? openEditTaskModal : undefined}
+                                onDelete={isProjectAdmin ? handleTaskDelete : undefined}
+                                onStatusChange={canUpdateTaskStatus(task) ? handleTaskStatusChange : undefined}
                             />
                         ))}
                     </div>

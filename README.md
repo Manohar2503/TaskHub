@@ -328,15 +328,20 @@ frontend/
 
 ## 🔒 Role-Based Access Control
 
+In this application, admins are the task givers and members are the task receivers.
+
 ### Admin
-- Full access to all projects
-- Can manage all users
-- Can delete any project or task
+- Creates and manages projects
+- Adds registered users as project members
+- Assigns tasks to members
+- Can update or delete project tasks
 
 ### Member
-- Can view projects they're part of
-- Can only manage their assigned tasks
-- Cannot delete projects they don't own
+- Receives tasks assigned by an admin
+- Views assigned tasks in **My Tasks**
+- Updates task progress as `todo`, `in_progress`, or `completed`
+- Cannot create, assign, edit, or delete project tasks
+- Can work only within projects they are part of
 
 ## 🛡️ Security Features
 
