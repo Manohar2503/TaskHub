@@ -18,9 +18,6 @@ dotenv.config();
 // Initialize Express
 const app = express();
 
-// Connect to MongoDB
-connectDB();
-
 // ========================
 // Middleware
 // ========================
@@ -30,24 +27,35 @@ app.use(helmet());
 
 // CORS configuration
 const normalizeOrigin = (origin) => origin.replace(/\/$/, '');
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-    .split(',')
+const allowedOrigins = [
+    'http://localhost:5173',
+    'https://task-hub-jp3h.vercel.app',
+    ...(process.env.CORS_ORIGIN || '').split(','),
+]
     .map((origin) => origin.trim())
     .map(normalizeOrigin)
     .filter(Boolean);
 
-app.use(
-    cors({
-        origin(origin, callback) {
-            if (!origin || allowedOrigins.includes(normalizeOrigin(origin))) {
-                return callback(null, true);
-            }
+const corsOptions = {
+    origin(origin, callback) {
+        if (!origin) {
+            return callback(null, true);
+        }
 
-            return callback(new Error(`CORS blocked origin: ${origin}`));
-        },
-        credentials: true,
-    })
-);
+        const normalizedOrigin = normalizeOrigin(origin);
+        const isAllowed =
+            allowedOrigins.includes(normalizedOrigin) ||
+            /^https:\/\/[\w-]+\.vercel\.app$/.test(normalizedOrigin);
+
+        return callback(null, isAllowed);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
@@ -92,6 +100,15 @@ app.get('/health', (req, res) => {
 // ========================
 // Routes
 // ========================
+
+app.use('/api', async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
